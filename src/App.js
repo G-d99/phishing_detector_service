@@ -1,67 +1,101 @@
-import { useState } from "react";
-import axios from "axios";
+import React, { useState } from "react";
+import { analyzeData } from "./api";
 
 function App() {
   const [url, setUrl] = useState("");
+  const [email, setEmail] = useState("");
+  const [html, setHtml] = useState("");
   const [text, setText] = useState("");
+  const [file, setFile] = useState(null);
   const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleAnalyze = async () => {
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
     try {
-      const res = await axios.post("http://localhost:8000/analyze", {
-        url,
-        text
-      });
-      setResult(res.data);
+      const data = { url, email, html, text };
+      const response = await analyzeData(data, file);
+      setResult(response);
     } catch (err) {
-      alert("백엔드 연결 실패");
+      setError("분석 중 오류 발생");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ width: "600px", margin: "40px auto" }}>
-      <h2>피싱/악성 위협 탐지 시스템</h2>
+    <div style={{ padding: "20px" }}>
+      <h2>피싱 분석기</h2>
 
-      <input
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        placeholder="URL 입력"
-        style={{ width: "100%", padding: "8px", marginTop: "12px" }}
-      />
-      <input
-        type="file"
-        accept=".txt,.html,.eml"
-        onChange={(e) => {
-         const file = e.target.files[0];
-         const reader = new FileReader();
-         reader.onload = () => setText(reader.result);
-         reader.readAsText(file);
-  }}
-  style={{ marginTop: "12px" }}
-/>
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="텍스트 입력"
-        style={{ width: "100%", height: "100px", padding: "8px", marginTop: "12px" }}
-      />
+      <div>
+        <input
+          type="text"
+          placeholder="URL 입력"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          style={{ width: "400px", marginBottom: "5px" }}
+        />
+      </div>
 
-      <button
-        onClick={handleAnalyze}
-        style={{ padding: "12px 20px", marginTop: "12px", cursor: "pointer" }}
-      >
-        위협 분석
+      <div>
+        <textarea
+          placeholder="이메일 본문 입력"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          rows={3}
+          cols={50}
+          style={{ marginBottom: "5px" }}
+        />
+      </div>
+
+      <div>
+        <textarea
+          placeholder="HTML 입력"
+          value={html}
+          onChange={(e) => setHtml(e.target.value)}
+          rows={3}
+          cols={50}
+          style={{ marginBottom: "5px" }}
+        />
+      </div>
+
+      <div>
+        <textarea
+          placeholder="일반 텍스트 입력"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={3}
+          cols={50}
+          style={{ marginBottom: "5px" }}
+        />
+      </div>
+
+      <div>
+        <input
+          type="file"
+          onChange={(e) => setFile(e.target.files[0])}
+          style={{ marginBottom: "10px" }}
+        />
+      </div>
+
+      <button onClick={handleAnalyze} disabled={loading}>
+        {loading ? "분석 중..." : "분석 시작"}
       </button>
 
+      {error && <div style={{ color: "red", marginTop: "10px" }}>{error}</div>}
+
       {result && (
-        <div style={{ marginTop: "20px", padding: "16px", border: "1px solid #ccc" }}>
-          <p>최종판정: {result.최종판정}</p>
-          <p>위협유형: {result.위협유형}</p>
-          {Array.isArray(result.판단근거) && (
-            <p>판단근거: {result.판단근거.join(", ")}</p>
-          )}
-          <p>위험점수: {result.위험점수}</p>
-          <p>권장대응: {result.권장대응}</p>
+        <div style={{ marginTop: "20px" }}>
+          <h3>분석 결과</h3>
+          <p>최종 판정: {result.최종판정}</p>
+          <p>위협 유형: {result.위협유형 || "없음"}</p>
+          <p>판단 근거: {result.판단근거.join(", ") || "없음"}</p>
+          <p>위험 점수: {result.위험점수}</p>
+          <p>권장 대응: {result.권장대응}</p>
         </div>
       )}
     </div>
@@ -69,3 +103,6 @@ function App() {
 }
 
 export default App;
+
+
+
